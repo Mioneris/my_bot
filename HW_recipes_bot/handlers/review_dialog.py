@@ -1,8 +1,8 @@
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
-from aiogram import Router, types
-from aiogram.filters import Command
+from aiogram import Router, types, F
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
+import sqlite3
 
 review_router = Router()
 
@@ -17,16 +17,22 @@ class RestourantReview(StatesGroup):
     extra_comments = State()
 
 
-@review_router.message(Command('start_review'))
-async def start_review(message: types.Message, state: FSMContext):
-    if message.from_user.id in users:
-        await message.answer("Вы уже оставляли отзыв.")
+@review_router.callback_query(F.data == "start_review")
+async def start_review(callback: CallbackQuery, state: FSMContext):
+    user_id = callback.from_user.id
+
+    if user_id in users:
+        await callback.message.answer('Вы уже оставляли отзыв!')
+        await callback.answer()
         await state.clear()
         return
 
-    users.add(message.from_user.id)
+    users.add(user_id)
 
-    await message.answer("Как Вас зовут?")
+    await callback.message.answer('Вы начали оставлять отзыв.')
+
+    await callback.message.answer("Как Вас зовут?")
+    await callback.answer()
     await state.set_state(RestourantReview.name)
 
 
@@ -145,7 +151,15 @@ async def extra_comments(message: types.Message, state: FSMContext):
     await state.update_data(extra_comments=message.text)
     data = await state.get_data()
 
-    # cleanliness_rating = data.get('cleanliness_rating')
+    with sqlite3.connect('db.review_results') as connection:
+        connection.execute("""INSERT INTO review_results
+        (name, contact_info,
+         food_rating, cleanliness_rating,
+          extra_comments) VALUES (?, ?, ?, ?, ?)""",
+                           (data['name'], data['contact_info'],
+                            data['food_rating'], data['cleanliness_rating'],
+                            data['extra_comments'])
+                           )
 
     await (message.answer
            (f"Благодарим Вас за оставленный отзыв!\n"

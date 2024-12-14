@@ -1,8 +1,7 @@
-from aiogram import Router,types,F
+from aiogram import Router, types, F
 from aiogram.fsm.context import FSMContext
 from aiogram.filters import Command
 from .review_dialog import start_review
-
 
 start_router = Router()
 
@@ -27,12 +26,4 @@ async def start(message: types.Message):
                          f' Our bot already serves {user_count} users.\n'
                          f'Available Commands:\n'
                          f' {commands}', reply_markup=keyboard)
-
-
-@start_router.callback_query(F.data == "start_review")
-async def callback_start_review(callback: types.callback_query, state: FSMContext):
-    await callback.message.answer('Вы начали оставлять отзыв.')
-    await callback.answer()
-    await start_review(callback.message, state)
-
 
