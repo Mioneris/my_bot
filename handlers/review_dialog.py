@@ -2,7 +2,7 @@ from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
 from aiogram import Router, types, F
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
-import sqlite3
+from bot_config import database
 
 review_router = Router()
 
@@ -112,17 +112,8 @@ async def extra_comments(message: types.Message, state: FSMContext):
     await state.update_data(extra_comments=message.text)
     data = await state.get_data()
 
-    with sqlite3.connect('db.review_results') as connection:
-        connection.execute("""INSERT INTO review_results
-        (name, contact_info,
-         food_rating, cleanliness_rating,
-          extra_comments) VALUES (?, ?, ?, ?, ?)""",
-                           (data['name'],
-                            data['contact_info'],
-                            data['food_rating'],
-                            data['cleanliness_rating'],
-                            data['extra_comments'])
-                           )
+    database.save_review_results(data)
+
 
     await (message.answer
            (f"Благодарим Вас за оставленный отзыв!\n"
@@ -134,6 +125,22 @@ async def extra_comments(message: types.Message, state: FSMContext):
 
     await state.clear()
 
+
+    # with sqlite3.connect('db.sqlite3') as connection:
+    #     connection.execute(
+    #         """
+    #         INSERT INTO review_results
+    #         (name, contact_info,
+    #         food_rating,
+    #         cleanliness_rating,
+    #         extra_comments)
+    #         VALUES (?, ?, ?, ?, ?)""",
+    #                        (data['name'],
+    #                         data['contact_info'],
+    #                         data['food_rating'],
+    #                         data['cleanliness_rating'],
+    #                         data['extra_comments'])
+    #                        )
 
 #
 # @review_router.message(RestourantReview.food_rating)
@@ -218,4 +225,3 @@ async def extra_comments(message: types.Message, state: FSMContext):
 #             await callback.answer('Пожалуйста, выберите оценку от 1 до 5')
 #             return
 #
-

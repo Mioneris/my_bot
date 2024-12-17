@@ -6,6 +6,8 @@ from bot_config import dp, bot, database
 import logging
 from handlers.review_dialog import review_router
 
+async def on_startup(bot):
+    database.create_tables()
 
 async def main():
     dp.include_routers(start_router,
@@ -18,8 +20,8 @@ async def main():
     await dp.start_polling(bot)
 
 
-async def on_startup(bot):
-    database.create_tables()
+# async def on_startup(bot):
+#     database.create_tables()
 
 
 if __name__ == '__main__':

@@ -5,4 +5,4 @@ from database import Database
 token = dotenv_values(".env")["BOT_TOKEN"]
 bot = Bot(token=token)
 dp = Dispatcher()
-database = Database('db.review_results')
+database = Database('db.sqlite3')
