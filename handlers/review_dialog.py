@@ -3,9 +3,9 @@ from aiogram.fsm.context import FSMContext
 from aiogram import Router, types, F
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from bot_config import database
+import datetime
 
 review_router = Router()
-
 users = set()
 
 
@@ -15,6 +15,7 @@ class RestourantReview(StatesGroup):
     food_rating = State()
     cleanliness_rating = State()
     extra_comments = State()
+    confirm_review = State()
 
 
 @review_router.callback_query(F.data == "start_review")
@@ -38,7 +39,9 @@ async def start_review(callback: CallbackQuery, state: FSMContext):
 @review_router.message(RestourantReview.name)
 async def get_name(message: types.Message, state: FSMContext):
     name = message.text
-    print(name)
+    if not name.isalpha():
+        await message.answer('Пожалуйста, используйте буквы для ввода имени.')
+        return
     await state.update_data(name=message.text)
     await message.answer('пожалуйста, оставьте контактные данные для обратной связи '
                          '(Контактный номер телефона/Инстаграм)')
@@ -110,10 +113,21 @@ async def extra_comments(message: types.Message, state: FSMContext):
         await message.answer('Допустимое количество символов - 300')
         return
     await state.update_data(extra_comments=message.text)
+
+    current_date = datetime.datetime.now().strftime("%Y-%m-%d")
+    await state.update_data(review_date=current_date)
+
     data = await state.get_data()
 
-    database.save_review_results(data)
+    kb = InlineKeyboardMarkup(
 
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(text="Да", callback_data='YES'),
+                InlineKeyboardButton(text="Нет", callback_data='NO')
+            ]
+        ]
+    )
 
     await (message.answer
            (f"Благодарим Вас за оставленный отзыв!\n"
@@ -121,9 +135,37 @@ async def extra_comments(message: types.Message, state: FSMContext):
             f"Контакт: {data['contact_info']}\n"
             f"Оценка блюда: {data['food_rating']}\n"
             f"Оценка санитарии заведения: {data['cleanliness_rating']}\n"
-            f"Коментарий: {data['extra_comments']}"))
+            f"Коментарий: {data['extra_comments']}\n"
+            f"Дата отзыва: {data['review_date']}"))
 
+    await message.answer('Отзыв составлен.\n'
+                         'Подтверждаете корректность написаного отзыва?', reply_markup=kb)
+
+    await state.set_state(RestourantReview.confirm_review)
+
+
+@review_router.callback_query(F.data == "YES")
+async def confirm_review(callback: CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    database.save_review_results(data)
+    await callback.message.answer("Ваш отзыв успешно сохранен. Спасибо!")
+    await callback.answer()
     await state.clear()
+
+
+@review_router.callback_query(F.data == "NO")
+async def retry_review(callback: CallbackQuery, state: FSMContext):
+    user_id = callback.from_user.id
+
+    if user_id in users:
+        users.remove(user_id)
+
+    await callback.message.answer("Отзыв возможно изменить.\n"
+                                  "Начнем сначала!")
+    await callback.answer()
+    await state.clear()
+    await start_review(callback, state)
+
 
 
     # with sqlite3.connect('db.sqlite3') as connection:

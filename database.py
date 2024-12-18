@@ -1,6 +1,5 @@
 import sqlite3
-
-
+#REVIEW DATABASE
 class Database:
     def __init__(self, path: str):
         self.path = path
@@ -14,7 +13,8 @@ class Database:
             contact_info VARCHAR(100),
             food_rating INTEGER,
             cleanliness_rating INTEGER,
-            extra_comments VARCHAR(300)
+            extra_comments VARCHAR(300),
+            date Date
             )
             """)
         conn.commit()
@@ -27,11 +27,14 @@ class Database:
                 (name, contact_info,
                 food_rating, 
                 cleanliness_rating,
-                extra_comments) 
-                VALUES (?, ?, ?, ?, ?)""",
+                extra_comments,
+                date
+                ) 
+                VALUES (?, ?, ?, ?, ?,?)""",
                 (data['name'],
                  data['contact_info'],
                  data['food_rating'],
                  data['cleanliness_rating'],
-                 data['extra_comments'])
+                 data['extra_comments'],
+                 data['review_date'])
             )
