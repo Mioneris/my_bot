@@ -5,6 +5,7 @@ from handlers.my_info import my_info_router
 from handlers.dish_edit import dish_management_router
 from bot_config import dp, bot, database,database_dish
 import logging
+from handlers.menu import menu_router
 from handlers.review_dialog import review_router
 
 async def on_startup(bot):
@@ -17,6 +18,7 @@ async def main():
                        random_router,
                        my_info_router,
                        review_router,
+                       menu_router,
                        dish_management_router)
 
     dp.startup.register(on_startup)

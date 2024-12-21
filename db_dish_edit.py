@@ -55,3 +55,10 @@ class Dish_db:
                           data['description'],
                           data['category']))
             conn.commit()
+
+
+    def get_menu(self):
+        with sqlite3.connect(self.path) as conn:
+            result = conn.execute("SELECT * FROM dish_info")
+            return result.fetchall()
+

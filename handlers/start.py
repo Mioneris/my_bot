@@ -1,7 +1,5 @@
-from aiogram import Router, types, F
-from aiogram.fsm.context import FSMContext
+from aiogram import Router, types
 from aiogram.filters import Command
-from .review_dialog import start_review
 
 start_router = Router()
 
@@ -19,12 +17,20 @@ async def start(message: types.Message):
     user_count = len(users)
     keyboard = types.InlineKeyboardMarkup(
         inline_keyboard=[
-            [types.InlineKeyboardButton
-             (text="Оставить отзыв", callback_data="start_review")]
+            [
+                types.InlineKeyboardButton(text='Информация о Вас', callback_data="my_info"),
+                types.InlineKeyboardButton(text='Случайный рецепт из бота', callback_data="recipes")
+            ],
+            [
+                types.InlineKeyboardButton(text="Оставить отзыв", callback_data="start_review"),
+                types.InlineKeyboardButton(text='Меню заведения', callback_data="menu")
+            ],
+            [
+                types.InlineKeyboardButton(text='Админ. редактор', callback_data="start_editing")
+            ]
         ])
 
-    await message.answer(f'Привет, {name}!'
+    await message.answer(f'Привет, {name}!\n'
                          f' Наш бот обслуживает уже {user_count} пользователей.\n'
-                         f'Доступные команды:\n'
-                         f' {commands}', reply_markup=keyboard)
-
+                         f'Ниже предоставлен доступный функционал бота\n',
+                         reply_markup=keyboard)
