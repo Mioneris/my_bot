@@ -1,5 +1,4 @@
-from aiogram import Router, types, F
-from aiogram.fsm.context import FSMContext
+from aiogram import Router, F
 from aiogram.types import CallbackQuery
 
 my_info_router = Router()

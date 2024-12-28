@@ -1,25 +1,18 @@
 import asyncio
-from handlers.random import random_router
-from handlers.start import start_router
-from handlers.my_info import my_info_router
-from handlers.dish_edit import dish_management_router
-from bot_config import dp, bot, database,database_dish
+from handlers.group_bot import group_router
+from handlers import private_router
+from bot_config import dp, bot, database
 import logging
-from handlers.menu import menu_router
-from handlers.review_dialog import review_router
+
 
 async def on_startup(bot):
     database.create_tables()
-    database_dish.create_tables()
-    database_dish.insert_categories()
+    database.insert_categories()
+
 
 async def main():
-    dp.include_routers(start_router,
-                       random_router,
-                       my_info_router,
-                       review_router,
-                       menu_router,
-                       dish_management_router)
+    dp.include_routers(private_router,
+                       group_router)
 
     dp.startup.register(on_startup)
     # запуск бота

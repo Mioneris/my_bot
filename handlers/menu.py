@@ -1,54 +1,63 @@
-from bot_config import database_dish
+from bot_config import database
 from aiogram import Router, F, types
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
-import sqlite3
+from aiogram.types import CallbackQuery
+from .keyboards import start_keyboard
 
 menu_router = Router()
 
 
 @menu_router.callback_query(F.data == "menu")
 async def show_menu(callback: CallbackQuery):
-    categories = database_dish.get_categories()
+    categories = database.get_categories_with_dishes()
 
-    menu_kb = types.InlineKeyboardMarkup(
-        inline_keyboard=[
-            [
-                types.InlineKeyboardButton(text=category, callback_data=f"category:{category}")
-            ] for category in categories
-        ]
-    )
-    await callback.message.edit_text('Выберите категорию из меню:', reply_markup=menu_kb)
+    if categories:
+        category_buttons = [[types.KeyboardButton(text=category)] for category in categories]
+
+        category_buttons.append([types.KeyboardButton(text="Возврат в главное меню бота")])
+
+        menu_kb = types.ReplyKeyboardMarkup(keyboard=category_buttons,
+                                            resize_keyboard=True,
+                                            one_time_keyboard=True)
+        await callback.message.answer('Выберите категорию из меню:', reply_markup=menu_kb)
+    else:
+        await callback.message.answer('На данный момент меню пусто.')
 
 
-@menu_router.callback_query(F.data.startswith("category:"))
-async def show_menu(callback: CallbackQuery):
-    category_name = callback.data.split("category:")[1]
+@menu_router.message(F.text == "Возврат в главное меню бота")
+async def back_to_bot_menu(message: types.Message):
+    await message.answer('Возврат в главное меню бота!',
+                         reply_markup=types.ReplyKeyboardRemove())
+    await message.answer("Главное меню:", reply_markup=start_keyboard())
 
-    with sqlite3.connect(database_dish.path) as conn:
-        cursor = conn.execute(
-            "SELECT name,price,description FROM dish_info WHERE category = ?",
-            (category_name,)
-        )
-    dishes = cursor.fetchall()
+
+@menu_router.message(F.text.in_(database.get_categories_with_dishes()))
+async def show_menu_by_cat(message: types.Message):
+    menu = database.get_menu()
+    cat_name = message.text
+    dishes = [dish for dish in menu if dish["category"] == cat_name]
 
     if dishes:
         for dish in dishes:
-            name, price, description = dish
-            await callback.message.answer(
-                f"Название: {name}\n"
-                f"Цена:{price}\n"
-                f"Описание:{description}"
-            )
-    else:
-        await callback.message.answer("В выбранной категории пока отсутствуют блюда")
+            picture = dish["dish_picture"] or None
 
-    backstep_menu = InlineKeyboardMarkup(
+            txt = (f"Название: {dish['name']}\n"
+                   f"Цена: {dish['price']}\n"
+                   f"Описание: {dish['description']}\n"
+                   f"Категория: {dish['category']}\n")
+
+            if picture:
+                await message.answer_photo(photo=picture, caption=txt)
+            else:
+                await message.answer(txt)
+
+    backstep_menu = types.InlineKeyboardMarkup(
         inline_keyboard=[
             [
-                InlineKeyboardButton(text="Назад к категориям", callback_data="menu")
+                types.InlineKeyboardButton(text="Назад к категориям",
+                                           callback_data="menu"),
             ]
         ]
     )
 
-    await callback.message.answer('Возврат к категория:',
-                                  reply_markup=backstep_menu)
+    await message.answer('Возврат к категориям:',
+                         reply_markup=backstep_menu)

@@ -1,39 +1,38 @@
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
 from aiogram import Router, types, F
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery, ReplyKeyboardMarkup
-from aiogram.filters import Command
-from bot_config import database_dish
+from aiogram.types import  CallbackQuery
+from bot_config import database
 from dotenv import dotenv_values
 
 USER_ID = int(dotenv_values(".env")["USER_ID"])
 
 dish_management_router = Router()
-dish_management_router.message.filter(F.from_user.id == USER_ID)
-dish_management_router.callback_query.filter(F.from_user.id == USER_ID)
+
 
 def remove_keyboard():
     return types.ReplyKeyboardRemove()
 
 
-class dish_info(StatesGroup):
+class Dish_info(StatesGroup):
     name = State()
     price = State()
     description = State()
     category = State()
+    dish_picture = State()
 
 
 @dish_management_router.callback_query(F.data == "start_editing")
 async def dish_edit_callback(callback: CallbackQuery, state: FSMContext):
     if callback.from_user.id != USER_ID:
-        await callback.answer('У Вас нет прав для выполнения этой команды!',show_alert=True)
+        await callback.answer('У Вас нет прав для выполнения этой команды!', show_alert=True)
         return
     await callback.message.edit_text('|Название блюда|\n'
-                         'Введите название блюда.')
-    await state.set_state(dish_info.name)
+                                     'Введите название блюда.')
+    await state.set_state(Dish_info.name)
 
 
-@dish_management_router.message(dish_info.name)
+@dish_management_router.message(Dish_info.name)
 async def get_dish_name(message: types.Message, state: FSMContext):
     name = message.text.strip()
     if not name or not any(char.isalpha() for char in name):
@@ -41,10 +40,7 @@ async def get_dish_name(message: types.Message, state: FSMContext):
         return
     await state.update_data(name=name)
 
-    categories = database_dish.get_categories()
-    if not categories:
-        await message.answer('Категория блюд не найдена. Выберите из предложенных.')
-        return
+    categories = database.get_categories_dish_edit()
 
     kb = types.ReplyKeyboardMarkup(
         keyboard=[
@@ -54,10 +50,10 @@ async def get_dish_name(message: types.Message, state: FSMContext):
 
     await message.answer('|Категория|\n'
                          'Укажите категорию добавляемого блюда.', reply_markup=kb)
-    await state.set_state(dish_info.category)
+    await state.set_state(Dish_info.category)
 
 
-@dish_management_router.message(dish_info.category)
+@dish_management_router.message(Dish_info.category)
 async def get_dish_category(message: types.Message, state: FSMContext):
     category = message.text
     allowed_categories = ["Супы",
@@ -72,10 +68,10 @@ async def get_dish_category(message: types.Message, state: FSMContext):
     await state.update_data(category=category)
     await message.answer("|Цена|\n"
                          "Введите стоимость блюда (в числовом формате)", reply_markup=remove_keyboard())
-    await state.set_state(dish_info.price)
+    await state.set_state(Dish_info.price)
 
 
-@dish_management_router.message(dish_info.price)
+@dish_management_router.message(Dish_info.price)
 async def get_dish_price(message: types.Message, state: FSMContext):
     try:
         price = float(message.text)
@@ -88,10 +84,10 @@ async def get_dish_price(message: types.Message, state: FSMContext):
     await message.answer('|Описание|\n'
                          'Введите описание блюда\n'
                          '(До 150 символов)')
-    await state.set_state(dish_info.description)
+    await state.set_state(Dish_info.description)
 
 
-@dish_management_router.message(dish_info.description)
+@dish_management_router.message(Dish_info.description)
 async def get_dish_description(message: types.Message, state: FSMContext):
     description = message.text
     if len(description) > 150:
@@ -99,14 +95,31 @@ async def get_dish_description(message: types.Message, state: FSMContext):
         return
 
     await state.update_data(description=description)
+    await message.answer("|Фото блюда|\n"
+                         "Прикрепите фото блюда(одно изображение).")
+    await state.set_state(Dish_info.dish_picture)
+
+
+@dish_management_router.message(Dish_info.dish_picture, F.photo)
+async def get_dish_photo(message: types.Message, state: FSMContext):
+    if not message.photo:
+        await message.answer('Пожалуйста, отправьте изображение.')
+        return
+
+    dis_pics = message.photo
+    biggest_image = dis_pics[-1]
+    biggest_image_id = biggest_image.file_id
+    await state.update_data(dish_picture=biggest_image_id)
+
     data = await state.get_data()
 
     await (message.answer(
         f"Название блюда: {data['name']}\n"
         f"Категория блюда: {data['category']}\n"
         f"Стоимость блюда: {data['price']}\n"
-        f"Описание: {data['description']}"
+        f"Описание: {data['description']}\n"
+        f"Фото: {biggest_image_id}"
     ))
 
-    database_dish.save_dish_info(data)
-
+    database.save_dish_info(data)
+    await state.clear()
