@@ -1,5 +1,4 @@
-from aiogram import Router, types,F
-from aiogram.filters import Command
+from aiogram import Router,F
 import random
 import os  #встроенный модуль для предоставления функции взаимодействий с ОС.
 # позволяет работать с файловой системой,

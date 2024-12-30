@@ -1,5 +1,5 @@
 import asyncio
-from handlers.group_bot import group_router
+from handlers.group_bot_homework import group_router
 from handlers import private_router
 from bot_config import dp, bot, database
 import logging
@@ -17,10 +17,6 @@ async def main():
     dp.startup.register(on_startup)
     # запуск бота
     await dp.start_polling(bot)
-
-
-# async def on_startup(bot):
-#     database.create_tables()
 
 
 if __name__ == '__main__':

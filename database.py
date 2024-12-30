@@ -1,5 +1,6 @@
 import sqlite3
 
+
 class Database:
     def __init__(self, path: str):
         self.path = path
@@ -18,6 +19,7 @@ class Database:
             user_id INTEGER
             )
             """)
+            conn.commit()
 
             conn.execute("""
                         CREATE TABLE IF NOT EXISTS dish_info
@@ -30,12 +32,21 @@ class Database:
                         FOREIGN KEY (category) REFERENCES dish_category(category_name)                     
                         )
                         """)
+            conn.commit()
 
             conn.execute("""
                         CREATE TABLE IF NOT EXISTS dish_category
                         (id INTEGER PRIMARY KEY AUTOINCREMENT,
                         category_name TEXT UNIQUE NOT NULL)""")
-        conn.commit()
+            conn.commit()
+
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS bot_database
+                (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER UNIQUE ,
+                warnings INTEGER DEFAULT 0)
+                """)
+            conn.commit()
 
     def save_review_results(self, data: dict):
         with sqlite3.connect(self.path) as connection:
@@ -83,7 +94,7 @@ class Database:
             SELECT DISTINCT dc.category_name
             FROM dish_category dc
             JOIN dish_info di ON dc.category_name = di.category"""
-                )
+                                  )
             return [row[0] for row in cursor.fetchall()]
 
     def save_dish_info(self, data: dict):
@@ -117,3 +128,39 @@ class Database:
                            (user_id,))
             user = cursor.fetchall()
             return user
+
+    def insert_or_update_user(self, user_id):
+        with sqlite3.connect(self.path) as connection:
+            connection.execute("""
+            INSERT INTO bot_database (user_id, warnings)
+            VALUES (?,1)
+            ON CONFLICT(user_id) DO NOTHING """,
+                               (user_id,))
+            connection.commit()
+
+    def update_warnings(self, user_id: int):
+        with sqlite3.connect(self.path) as connection:
+            connection.execute("""
+            UPDATE bot_database 
+            SET warnings = warnings + 1
+            WHERE user_id = ?""", (user_id,))
+            connection.commit()
+
+            result = connection.execute("""
+                        SELECT warnings FROM bot_database WHERE user_id = ?""",
+                                        (user_id,)).fetchone()
+            return result[0] if result else 0
+
+    def get_warnings(self,user_id: int):
+        with sqlite3.connect(self.path) as connection:
+            result = connection.execute("""
+                                    SELECT warnings FROM bot_database WHERE user_id = ?""",
+                                        (user_id,)).fetchone()
+            return result[0] if result else 0
+
+
+    def ban_user(self, user_id: int):
+        with sqlite3.connect(self.path) as connection:
+            connection.execute("DELETE FROM bot_database WHERE user_id = ?",
+                               (user_id,))
+            connection.commit()
