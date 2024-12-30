@@ -9,9 +9,6 @@ group_router = Router()
 group_router.message.filter(F.chat.type != 'private')
 
 
-# реобразование кода в машиночитаемый формат,
-# позволяющий проводить дальнейшую обработку и анализ
-
 
 @group_router.chat_member()
 async def group_greeting(chat_member_update: types.ChatMemberUpdated):
@@ -27,7 +24,8 @@ async def group_greeting(chat_member_update: types.ChatMemberUpdated):
 
 BAD_WORDS = ('аниме', "анимешник", "наруто")
 
-
+# реобразование кода в машиночитаемый формат,
+# позволяющий проводить дальнейшую обработку и анализ
 def parsing_time(time_str: str):
     match = re.match(r'(\d+)([мчдн])', time_str.strip().lower())
 
