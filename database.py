@@ -133,7 +133,7 @@ class Database:
         with sqlite3.connect(self.path) as connection:
             connection.execute("""
             INSERT INTO bot_database (user_id, warnings)
-            VALUES (?,1)
+            VALUES (?,0)
             ON CONFLICT(user_id) DO NOTHING """,
                                (user_id,))
             connection.commit()
